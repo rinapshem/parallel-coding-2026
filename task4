@@ -1,0 +1,96 @@
+using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
+
+class Program
+{
+    static void Main()
+    {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        Console.Write("Введите размер матрицы N: ");
+        int n = int.Parse(Console.ReadLine() ?? "500");
+
+        Console.Write("Введите режим (seq / 2 / 4 / 8): ");
+        string mode = (Console.ReadLine() ?? "seq").Trim().ToLower();
+
+        Console.WriteLine();
+        Console.WriteLine($"Матрицы {n}x{n}, режим = {mode}");
+        Console.WriteLine();
+
+        // Создаём матрицы
+        double[,] a = new double[n, n];
+        double[,] b = new double[n, n];
+        double[,] c = new double[n, n];
+
+        // Заполняем случайными числами
+        var rnd = new Random(12345);
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+            {
+                a[i, j] = rnd.NextDouble();
+                b[i, j] = rnd.NextDouble();
+            }
+
+        // Замеряем время
+        var sw = Stopwatch.StartNew();
+
+        if (mode == "seq")
+        {
+            MultiplySequential(a, b, c, n);
+        }
+        else
+        {
+            int threads = int.Parse(mode);
+            MultiplyParallel(a, b, c, n, threads);
+        }
+
+        sw.Stop();
+
+        Console.WriteLine($"Время выполнения: {sw.ElapsedMilliseconds} мс");
+
+        // Контрольная сумма — чтобы убедиться, что результат не пустой
+        double sum = 0;
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                sum += c[i, j];
+
+        Console.WriteLine($"Контрольная сумма: {sum:E6}");
+    }
+
+    // Последовательное умножение
+    static void MultiplySequential(double[,] a, double[,] b, double[,] c, int n)
+    {
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                double sum = 0;
+                for (int k = 0; k < n; k++)
+                {
+                    sum += a[i, k] * b[k, j];
+                }
+                c[i, j] = sum;
+            }
+        }
+    }
+
+    // Параллельное умножение
+    static void MultiplyParallel(double[,] a, double[,] b, double[,] c, int n, int threadCount)
+    {
+        var options = new ParallelOptions { MaxDegreeOfParallelism = threadCount };
+
+        Parallel.For(0, n, options, i =>
+        {
+            for (int j = 0; j < n; j++)
+            {
+                double sum = 0;
+                for (int k = 0; k < n; k++)
+                {
+                    sum += a[i, k] * b[k, j];
+                }
+                c[i, j] = sum;
+            }
+        });
+    }
+}
